@@ -1,12 +1,8 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from models import db, Anggota
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
 from config import Config
-from sqlalchemy import SQLAlchemy
-
+import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -14,12 +10,9 @@ CORS(app)  # supaya bisa diakses React (cross-origin)
 
 db.init_app(app)
 
-# setup cloudinary
-cloudinary.config(
-    cloud_name=app.config["CLOUD_NAME"],
-    api_key=app.config["API_KEY"],
-    api_secret=app.config["API_SECRET"],
-)
+# bikin folder uploads kalau belum ada
+UPLOAD_FOLDER = os.path.join(app.root_path, "static/uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 with app.app_context():
     db.create_all()
@@ -40,13 +33,14 @@ def get_anggota():
 
 # Tambah Anggota baru
 @app.route("/api/anggota", methods=["POST"])
-def create_event():
-
+def tambah_anggota():
     foto_url = None
     if "foto" in request.files:
         file = request.files["foto"]
-        upload_result = cloudinary.uploader.upload(file)
-        foto_url = upload_result["secure_url"]
+        filename = file.filename
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+        foto_url = f"/static/uploads/{filename}"
 
     anggota_baru = Anggota(
         nama=request.form.get("nama"),
